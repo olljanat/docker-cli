@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewCheckpointCommand returns the `checkpoint` subcommand (only in experimental)
+// NewCheckpointCommand returns the `checkpoint` subcommand
 func NewCheckpointCommand(dockerCli command.Cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "checkpoint",
@@ -14,7 +14,6 @@ func NewCheckpointCommand(dockerCli command.Cli) *cobra.Command {
 		Args:  cli.NoArgs,
 		RunE:  command.ShowHelp(dockerCli.Err()),
 		Annotations: map[string]string{
-			"experimental": "",
 			"ostype":       "linux",
 			"version":      "1.25",
 		},
