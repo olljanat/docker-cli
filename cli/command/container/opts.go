@@ -55,6 +55,7 @@ type containerOptions struct {
 	extraHosts         opts.ListOpts
 	volumesFrom        opts.ListOpts
 	envFile            opts.ListOpts
+	capability         opts.ListOpts
 	capAdd             opts.ListOpts
 	capDrop            opts.ListOpts
 	groupAdd           opts.ListOpts
@@ -130,6 +131,7 @@ func addFlags(flags *pflag.FlagSet) *containerOptions {
 		aliases:           opts.NewListOpts(nil),
 		attach:            opts.NewListOpts(validateAttach),
 		blkioWeightDevice: opts.NewWeightdeviceOpt(opts.ValidateWeightDevice),
+		capability:        opts.NewListOpts(nil),
 		capAdd:            opts.NewListOpts(nil),
 		capDrop:           opts.NewListOpts(nil),
 		dns:               opts.NewListOpts(opts.ValidateIPAddress),
@@ -187,6 +189,7 @@ func addFlags(flags *pflag.FlagSet) *containerOptions {
 	flags.BoolVar(&copts.autoRemove, "rm", false, "Automatically remove the container when it exits")
 
 	// Security
+	flags.Var(&copts.capability, "capability", "Linux capabilities to be available for container (this overrides the default set of capabilities)")
 	flags.Var(&copts.capAdd, "cap-add", "Add Linux capabilities")
 	flags.Var(&copts.capDrop, "cap-drop", "Drop Linux capabilities")
 	flags.BoolVar(&copts.privileged, "privileged", false, "Give extended privileges to this container")
@@ -468,6 +471,11 @@ func parse(flags *pflag.FlagSet, copts *containerOptions) (*containerConfig, err
 		return nil, err
 	}
 
+	capabilities, err := parseCapabilities(copts.capability.GetAll())
+	if err != nil {
+		return nil, err
+	}
+
 	storageOpts, err := parseStorageOpts(copts.storageOpt.GetAll())
 	if err != nil {
 		return nil, err
@@ -601,6 +609,7 @@ func parse(flags *pflag.FlagSet, copts *containerOptions) (*containerConfig, err
 		PidMode:        pidMode,
 		UTSMode:        utsMode,
 		UsernsMode:     usernsMode,
+		Capabilities:   capabilities,
 		CapAdd:         strslice.StrSlice(copts.capAdd.GetAll()),
 		CapDrop:        strslice.StrSlice(copts.capDrop.GetAll()),
 		GroupAdd:       copts.groupAdd.GetAll(),
@@ -729,6 +738,19 @@ func parseSecurityOpts(securityOpts []string) ([]string, error) {
 	}
 
 	return securityOpts, nil
+}
+
+// parses capability options per container into a map
+func parseCapabilities(capabilities []string) ([]string, error) {
+	var newCaps []string
+	for _, option := range capabilities {
+		if option == "NONE" {
+			newCaps = make([]string, 0)
+			break
+		}
+		newCaps = append(newCaps, option)
+	}
+	return newCaps, nil
 }
 
 // parses storage options per container into a map
