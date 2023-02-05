@@ -59,9 +59,10 @@ func validateContextDir(contextDir string) (string, error) {
 }
 
 type pluginCreateOptions struct {
-	repoName string
-	context  string
-	compress bool
+	repoName  string
+	context   string
+	compress  bool
+	localName string
 }
 
 func newCreateCommand(dockerCli command.Cli) *cobra.Command {
@@ -82,6 +83,7 @@ func newCreateCommand(dockerCli command.Cli) *cobra.Command {
 	flags := cmd.Flags()
 
 	flags.BoolVar(&options.compress, "compress", false, "Compress the context using gzip")
+	flags.StringVar(&options.localName, "alias", "", "Local name for plugin")
 
 	return cmd
 }
@@ -117,6 +119,18 @@ func runCreate(dockerCli command.Cli, options pluginCreateOptions) error {
 
 	if err != nil {
 		return err
+	}
+
+	var localName string
+	if opts.localName != "" {
+		aref, err := reference.ParseNormalizedNamed(opts.localName)
+		if err != nil {
+			return err
+		}
+		if _, ok := aref.(reference.Canonical); ok {
+			return errors.Errorf("invalid name: %s", opts.localName)
+		}
+		localName = reference.FamiliarString(reference.TagNameOnly(aref))
 	}
 
 	ctx := context.Background()
