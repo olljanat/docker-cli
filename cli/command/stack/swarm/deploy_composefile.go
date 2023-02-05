@@ -56,11 +56,46 @@ func deployCompose(ctx context.Context, dockerCli command.Cli, opts options.Depl
 		return err
 	}
 
+	// HERE!!!
+	serviceClusterVolumes := getServicesDeclaredClusterVolumes(config.Services)
+	clusterVolumes, err := convert.Volumes(namespace, config.Volumes)
+	if err != nil {
+		return err
+	}
+	if err := createClusterVolumes(ctx, dockerCli, clusterVolumes); err != nil {
+		return err
+	}
+
+	/*
+		serviceNetworks := getServicesDeclaredNetworks(config.Services)
+		networks, externalNetworks := convert.Networks(namespace, config.Networks, serviceNetworks)
+		if err := validateExternalNetworks(ctx, dockerCli.Client(), externalNetworks); err != nil {
+			return err
+		}
+		if err := createNetworks(ctx, dockerCli, namespace, networks); err != nil {
+			return err
+		}
+	*/
 	services, err := convert.Services(namespace, config, dockerCli.Client())
 	if err != nil {
 		return err
 	}
 	return deployServices(ctx, dockerCli, services, namespace, opts.SendRegistryAuth, opts.ResolveImage)
+}
+
+func getServicesDeclaredClusterVolumes(serviceConfigs []composetypes.ServiceConfig) []string {
+	serviceClusterVolumes := []string{}
+	for _, serviceConfig := range serviceConfigs {
+		if len(serviceConfig.Volumes) == 0 {
+			continue
+		}
+		for _, volume := range serviceConfig.Volumes {
+			if volume.Type == "cluster" {
+				serviceClusterVolumes = append(serviceClusterVolumes, volume.Source)
+			}
+		}
+	}
+	return serviceClusterVolumes
 }
 
 func getServicesDeclaredNetworks(serviceConfigs []composetypes.ServiceConfig) map[string]struct{} {
